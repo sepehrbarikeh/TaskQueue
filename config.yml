@@ -1,0 +1,23 @@
+
+
+name: "Media Hub"
+version: 1.0
+
+
+server:
+  host: "localhost"
+  port: 4000
+
+
+db:
+  host: "localhost"
+  user: "postgres"
+  pass: "1234"
+  name: "mediahub"
+  port: 5432
+
+redis:
+  port: 6379
+  host: localhost
+  db: 0
+  password: ""
