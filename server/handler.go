@@ -1,11 +1,12 @@
 package server
 
 import (
-	"TaskQueu/pkg/queue"
-	"TaskQueu/repository/redis"
+	"TaskQueue/pkg/queue"
+	"TaskQueue/repository/redis"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"time"
 )
 
 type Handler struct {
@@ -32,6 +33,39 @@ func (h *Handler) EnqueueJob(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate required fields
+	if req.QueueName == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "queue name is required",
+		})
+	}
+
+	if req.Payload == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "payload is required",
+		})
+	}
+
+	if req.Type == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "job type is required",
+		})
+	}
+
+	// Set default values
+	if req.MaxRetries == 0 {
+		req.MaxRetries = 3
+	}
+
+	if req.RunAt.IsZero() {
+		req.RunAt = time.Now()
+	}
+
+	// Set default type if not provided
+	if req.Type == "" {
+		req.Type = req.QueueName
+	}
+
 	job := &queue.Job{
 		ID:         uuid.New().String(),
 		Queue:      req.QueueName,
@@ -50,7 +84,8 @@ func (h *Handler) EnqueueJob(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": "job enqueued",
+		"message": "job enqueued successfully",
 		"id":      job.ID,
+		"queue":   req.QueueName,
 	})
 }

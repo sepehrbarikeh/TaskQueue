@@ -1,18 +1,22 @@
 package worker
 
 import (
-	"TaskQueu/pkg/queue"
+	"TaskQueue/pkg/queue"
 	"context"
 	"errors"
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
 // تابع اصلی اجرای job
 func Execute(ctx context.Context, job *queue.Job) error {
-	switch job.Queue {
+	// Normalize job type (replace spaces with underscores)
+	jobType := strings.ReplaceAll(job.Type, " ", "_")
+
+	switch jobType {
 	case "send_email":
 		return handleSendEmail(ctx, job)
 	case "process_image":
@@ -30,11 +34,11 @@ func Execute(ctx context.Context, job *queue.Job) error {
 // =======================
 
 func handleSendEmail(ctx context.Context, job *queue.Job) error {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	log.Printf("sending email with payload: %s", job.Payload)
 
-	delay := time.Duration(rand.Intn(2)) * time.Second
+	delay := time.Duration(r.Intn(2)) * time.Second
 	select {
 	case <-time.After(delay):
 		log.Println("email sent successfully after delay")
@@ -45,13 +49,12 @@ func handleSendEmail(ctx context.Context, job *queue.Job) error {
 	}
 }
 
-
 func handleProcessImage(ctx context.Context, job *queue.Job) error {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	log.Printf("processing image with payload: %s", job.Payload)
 
-	delay := time.Duration(rand.Intn(10)) * time.Second
+	delay := time.Duration(r.Intn(10)) * time.Second
 	select {
 	case <-time.After(delay):
 		log.Println("process image successfully after delay")
@@ -63,11 +66,11 @@ func handleProcessImage(ctx context.Context, job *queue.Job) error {
 }
 
 func handleWriteLog(ctx context.Context, job *queue.Job) error {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	log.Printf("write log with payload: %s", job.Payload)
 
-	delay := time.Duration(rand.Intn(10)) * time.Second
+	delay := time.Duration(r.Intn(10)) * time.Second
 	select {
 	case <-time.After(delay):
 		log.Println("write log successfully after delay")

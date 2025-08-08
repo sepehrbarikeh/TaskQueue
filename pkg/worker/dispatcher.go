@@ -1,9 +1,9 @@
 package worker
 
 import (
-	"TaskQueu/pkg/queue"
-	"TaskQueu/repository/postgres"
-	"TaskQueu/repository/redis"
+	"TaskQueue/pkg/queue"
+	"TaskQueue/repository/postgres"
+	"TaskQueue/repository/redis"
 	"context"
 	"fmt"
 	"log"
@@ -82,10 +82,20 @@ func (d *Dispatcher) dispatchLoop() {
 
 			// بررسی زمان اجرای job
 			if time.Now().Before(job.RunAt) {
+				// Create a copy of the job to avoid race conditions
+				jobCopy := *job
 				go func(j *queue.Job) {
-					time.Sleep(job.RunAt.Sub(time.Now()))
-					d.JobChan <- j
-				}(job)
+					select {
+					case <-time.After(j.RunAt.Sub(time.Now())):
+						select {
+						case d.JobChan <- j:
+						case <-d.Ctx.Done():
+							return
+						}
+					case <-d.Ctx.Done():
+						return
+					}
+				}(&jobCopy)
 			} else {
 				d.JobChan <- job
 			}
@@ -110,37 +120,45 @@ func (d *Dispatcher) startWorker(id int) {
 				log.Printf("[worker-%d] retrying job %s (%d/%d) after %v delay", id, job.ID, job.RetryCount, job.MaxRetries, backoffDelay)
 
 				// Schedule retry with delay
+				jobCopy := *job
 				go func(j *queue.Job, delay time.Duration) {
-					time.Sleep(delay)
-					d.JobChan <- j
-				}(job, backoffDelay)
+					select {
+					case <-time.After(delay):
+						select {
+						case d.JobChan <- j:
+						case <-d.Ctx.Done():
+							return
+						}
+					case <-d.Ctx.Done():
+						return
+					}
+				}(&jobCopy, backoffDelay)
 			} else {
 				log.Printf("[worker-%d] max retries reached for job %s", id, job.ID)
 				// fail log
 				d.Postgres.InsertJobLog(postgres.JobLog{
-					ID:        uuid.New().String(),
-					JobID:     job.ID,
-					Queue:     job.Queue,
-					Status:    "failed",
-					Payload:   job.Payload,
+					ID:         uuid.New().String(),
+					JobID:      job.ID,
+					Queue:      job.Queue,
+					Status:     "failed",
+					Payload:    job.Payload,
 					RetryCount: job.RetryCount,
-					Error:     err.Error(),
-					CreatedAt: time.Now(),
-					
+					Error:      err.Error(),
+					CreatedAt:  time.Now(),
 				})
 			}
 		} else {
 			log.Printf("[worker-%d] job %s completed successfully", id, job.ID)
 			//success log
 			d.Postgres.InsertJobLog(postgres.JobLog{
-				ID:        uuid.New().String(),
-				JobID:     job.ID,
-				Queue:     job.Queue,
-				Status:    "success",
-				Payload:   job.Payload,
+				ID:         uuid.New().String(),
+				JobID:      job.ID,
+				Queue:      job.Queue,
+				Status:     "success",
+				Payload:    job.Payload,
 				RetryCount: job.RetryCount,
-				Error:     "",
-				CreatedAt: time.Now(),
+				Error:      "",
+				CreatedAt:  time.Now(),
 			})
 		}
 	}

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # TaskQueue Application
+  taskqueue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskqueue-app-dev
+    ports:
+      - "4000:4000"
+    environment:
+      - TZ=UTC
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - taskqueue-network
+    restart: unless-stopped
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+
+  # Redis Service
+  redis:
+    image: redis:7-alpine
+    container_name: taskqueue-redis-dev
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - taskqueue-network
+    restart: unless-stopped
+
+  # PostgreSQL Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: taskqueue-postgres-dev
+    environment:
+      POSTGRES_DB: taskqueue
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - taskqueue-network
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  taskqueue-network:
+    driver: bridge

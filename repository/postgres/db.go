@@ -1,7 +1,7 @@
 package postgres
 
 import (
-	"TaskQueu/config"
+	"TaskQueue/config"
 	"fmt"
 	"log"
 
@@ -10,13 +10,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type PostgresDB struct{
+type PostgresDB struct {
 	DB *gorm.DB
 }
 
-
 func New(config config.Db) PostgresDB {
-	
+
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
 		config.Host,
 		config.User,
@@ -30,14 +29,12 @@ func New(config config.Db) PostgresDB {
 		log.Fatal("❌ Failed to connect to DB:", err)
 	}
 
-	
 	log.Println("✅ Connected to PostgreSQL!")
 
 	return PostgresDB{
 		DB: db,
 	}
 }
-
 
 func (p *PostgresDB) InsertJobLog(log JobLog) error {
 	if log.ID == "" {
