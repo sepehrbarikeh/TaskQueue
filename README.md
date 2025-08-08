@@ -401,4 +401,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
 - **Documentation**: [README-Docker.md](README-Docker.md)
-- **Email**: support@taskqueue.com
+- **Email**: sepehr.frlncr@gmail.com
