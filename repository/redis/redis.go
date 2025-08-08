@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -23,30 +22,26 @@ func NewRedisQueue(cfg config.Redis) *RedisQueue {
         DB:       cfg.Db,                // شماره دیتابیس (از 0 تا 15 به‌طور پیش‌فرض)
     })
 
-    // بررسی اتصال
-    pong, err := rdb.Ping(ctx).Result()
-    if err != nil {
-        log.Fatalf("Redis connection failed: %v", err)
-    }
-    fmt.Println("redis connected", pong)
+    fmt.Println("redis connected")
 
     return &RedisQueue{
         client: rdb,
     }
 }
 
-var ctx = context.Background()
 
-func (r *RedisQueue) Enqueue(queueName string, job *queue.Job) error {
+func (r *RedisQueue) Enqueue(ctx context.Context,queueName string, job *queue.Job) error {
     data, err := json.Marshal(job)
+   // fmt.Println(data)
     if err != nil {
         return err
     }
     return r.client.LPush(ctx, "queue:"+queueName, data).Err()
 }
 
-func (r *RedisQueue) Dequeue(queueName string, timeout time.Duration) (*queue.Job, error) {
+func (r *RedisQueue) Dequeue(ctx context.Context,queueName string, timeout time.Duration) (*queue.Job, error) {
     res, err := r.client.BRPop(ctx, timeout, "queue:"+queueName).Result()
+   // fmt.Println(res)
     if err != nil {
         return nil, err
     }

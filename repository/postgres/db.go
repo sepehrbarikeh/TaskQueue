@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -35,4 +36,12 @@ func New(config config.Db) PostgresDB {
 	return PostgresDB{
 		DB: db,
 	}
+}
+
+
+func (p *PostgresDB) InsertJobLog(log JobLog) error {
+	if log.ID == "" {
+		log.ID = uuid.New().String()
+	}
+	return p.DB.Create(&log).Error
 }
